@@ -1,0 +1,26 @@
+{
+    "name": "ClassDocumentation",
+    "version": "1.0.0",
+    "id": "0cc6cbbd-b164-48a7-aedc-0fe3fab2ad93",
+    "formerNames": [],
+    "displayName": "Class Documentation",
+    "summary": "Builds better website documentation for Matlab classes",
+    "description": "Builds better website documentation for Matlab classes",
+    "provider": {
+        "name": "",
+        "organization": "",
+        "email": "",
+        "url": ""
+    },
+    "folders": [
+        {
+            "path": "Example",
+            "languages": [
+                "matlab"
+            ]
+        }
+    ],
+    "dependencies": [],
+    "releaseCompatibility": "R2024b",
+    "schemaVersion": "1.1.0"
+}
