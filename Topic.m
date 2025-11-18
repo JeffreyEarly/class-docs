@@ -77,46 +77,76 @@ classdef Topic < handle
         end
 
         function rootTopic = topicsFromString(detailedDescription)
-            % Extracts topics and subtopic from a detailedDescription and creates a structure useful creating an ordered topic index
+            % Extracts topics (and nested subtopics) from a detailedDescription and
+            % creates a Topic tree useful for creating an ordered topic index.
             %
-            % - Parameter mc: the detailed description
-            % - Returns detailedDescription: the detailed description without the topic/subtopic metadata
-            % - Returns rootTopic: a Topic instance containing the topics and subtopics defined by the class
+            % Each line of the form
+            %   - Topic: A
+            %   - Topic: A — B
+            %   - Topic: A — B — C
+            % is interpreted as a path A -> B -> C in the topic tree.
+            %
+            % The metadata lines themselves are stripped from detailedDescription
+            % (locally in this function; if you need the cleaned text returned, we
+            % can add that as a second output).
+
             arguments
                 detailedDescription
             end
 
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %
-            % Step 1) extract a list of topics and subtopics from the class's
-            % detailedDescription, and then sort those into useful structures.
-            %
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Step 1) Extract all "- Topic: ..." lines from the description
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            % extract topics and the detailed description (minus those topics)
-            subsubtopicExpression = '- topic:([ \t]*)(?<topicName>[^—\r\n]+)—([ \t]*)(?<subtopicName>[^\r\n]+)—([ \t]*)(?<subsubtopicName>[^\r\n]+)(?:$|\n)';
-            classDefinedSubsubTopics = regexpi(detailedDescription,subsubtopicExpression,'names');
-            detailedDescription = regexprep(detailedDescription,subsubtopicExpression,'','ignorecase');
-            subtopicExpression = '- topic:([ \t]*)(?<topicName>[^—\r\n]+)—([ \t]*)(?<subtopicName>[^\r\n]+)(?:$|\n)';
-            classDefinedSubTopics = regexpi(detailedDescription,subtopicExpression,'names');
-            detailedDescription = regexprep(detailedDescription,subtopicExpression,'','ignorecase');
-            topicExpression = '- topic:([ \t]*)(?<topicName>[^\r\n]+)(?:$|\n)';
-            classDefinedTopics = regexpi(detailedDescription,topicExpression,'names');
+            % Match whole lines that start with "- Topic:" (case-insensitive),
+            % capturing everything after "Topic:" up to the end of the line.
+            topicLineExpression = '^[ \t]*- topic:([^\r\n]+)\r?(?:\n|$)';
+
+            % tokens: cell array where each cell has { <text after Topic:> }
+            topicLines = regexp(detailedDescription, topicLineExpression, ...
+                'tokens', 'ignorecase', 'lineanchors');
+
+            % Remove those lines from the detailed description (locally)
+            detailedDescription = regexprep(detailedDescription, topicLineExpression, ...
+                '', 'ignorecase', 'lineanchors');
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Step 2) Build the Topic tree from the parsed lines
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             rootTopic = Topic('Root');
-            for iTopic=1:length(classDefinedTopics)
-                rootTopic.addSubtopic(Topic(strtrim(classDefinedTopics(iTopic).topicName)));
+
+            % Helper: get or create a subtopic under a given parent
+            function child = getOrCreateSubtopic(parent, name)
+                name = strtrim(name);
+                if isempty(name)
+                    child = parent;
+                    return
+                end
+                child = parent.subtopicWithName(name);
+                if isempty(child)
+                    child = Topic(name);
+                    parent.addSubtopic(child);
+                end
             end
 
-            for iSubtopic=1:length(classDefinedSubTopics)
-                topic = rootTopic.subtopicWithName(strtrim(classDefinedSubTopics(iSubtopic).topicName));
-                topic.addSubtopic(Topic(strtrim(classDefinedSubTopics(iSubtopic).subtopicName)));
-            end
+            % Each topic line may represent A, A—B, A—B—C, or deeper
+            for iLine = 1:numel(topicLines)
+                % topicLines{iLine} is a 1x1 cell, containing the captured string
+                fullPathStr = topicLines{iLine}{1};
 
-            for iSubtopic=1:length(classDefinedSubsubTopics)
-                topic = rootTopic.subtopicWithName(strtrim(classDefinedSubsubTopics(iSubtopic).topicName));
-                subtopic = topic.subtopicWithName(strtrim(classDefinedSubsubTopics(iSubtopic).subtopicName));
-                subtopic.addSubtopic(Topic(strtrim(classDefinedSubsubTopics(iSubtopic).subsubtopicName)));
+                % Split on em dash to get path components
+                parts = regexp(fullPathStr, '—', 'split');
+
+                % Walk down the tree, creating nodes as needed
+                currentNode = rootTopic;
+                for iPart = 1:numel(parts)
+                    partName = strtrim(parts{iPart});
+                    if isempty(partName)
+                        continue
+                    end
+                    currentNode = getOrCreateSubtopic(currentNode, partName);
+                end
             end
         end
     end
