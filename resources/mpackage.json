@@ -7,10 +7,10 @@
     "summary": "Builds better website documentation for Matlab classes",
     "description": "Builds better website documentation for Matlab classes",
     "provider": {
-        "name": "",
-        "organization": "",
-        "email": "",
-        "url": ""
+        "name": "Jeffrey J. Early",
+        "organization": "NorthWest Research Associates",
+        "email": "jearly@nwra.com",
+        "url": "https://github.com/JeffreyEarly/class-docs"
     },
     "folders": [
         {
