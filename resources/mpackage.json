@@ -20,7 +20,13 @@
             ]
         }
     ],
-    "dependencies": [],
+    "dependencies": [
+        {
+            "name": "ClassAnnotations",
+            "compatibleVersions": "^1.0",
+            "id": "2fadd643-a526-49d9-ac09-2486f9d1d4b9"
+        }
+    ],
     "releaseCompatibility": ">=R2024b",
     "schemaVersion": "1.1.0"
 }
