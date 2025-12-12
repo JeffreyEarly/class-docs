@@ -72,6 +72,7 @@ classdef ClassDocumentation < handle
             self.detailedDescription = Topic.trimTopicsFromString(self.detailedDescription);
 
             self.allMethodDocumentation = ClassDocumentation.methodDocumentationFromClass(self.name);
+            self.addMethodDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass(self.name));
             addlistener(self,'excludedSuperclasses','PostSet',@self.excludedSuperclassesDidChange); 
         end
 
@@ -83,12 +84,14 @@ classdef ClassDocumentation < handle
             % Add new method documentation beyond what was automatically
             % extracted from the class metadata---overwriting any existing
             % documentation with the same (case-sensitive) name.
-            existsAtIndex = strcmp(string({self.allMethodDocumentation(:).name}),methodDocumentation.name);
+            for iDoc = 1:length(methodDocumentation)
+            existsAtIndex = strcmp(string({self.allMethodDocumentation(:).name}),methodDocumentation(iDoc).name);
             if any(existsAtIndex)
                 index = find(existsAtIndex);
-                self.allMethodDocumentation(index) = methodDocumentation;
+                self.allMethodDocumentation(index) = methodDocumentation(iDoc);
             else
-                self.allMethodDocumentation(end+1) = methodDocumentation;
+                self.allMethodDocumentation(end+1) = methodDocumentation(iDoc);
+            end
             end
         end
 
@@ -372,7 +375,7 @@ classdef ClassDocumentation < handle
             methodDocumentation = MethodDocumentation.empty(0,0);
             classMetadata = meta.class.fromName(className);
 
-            if classMetadata.Name <= ?CAAnnotatedClass
+            if classMetadata <= ?CAAnnotatedClass
                 propertyAnnotations = feval(classMetadata.Name + ".classDefinedPropertyAnnotations");
                 for i=1:length(propertyAnnotations)
                     prop = propertyAnnotations(i);
