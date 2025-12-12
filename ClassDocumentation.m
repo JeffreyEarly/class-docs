@@ -38,7 +38,7 @@ classdef ClassDocumentation < handle
                 name
                 options.websiteRootURL = ""
                 options.buildFolder % the folder where we are dumping everything on the local hard drive. This will become the *root* website folder
-                options.websiteFolder % the folder relative to the root website folder
+                options.websiteFolder = "" % the folder relative to the root website folder
                 options.parent = []
                 options.grandparent = []
                 options.nav_order = []
