@@ -366,5 +366,35 @@ classdef ClassDocumentation < handle
             end
         end
 
+        function methodDocumentation = methodDocumentationFromAnnotatedClass(className)
+            % If the class is a subclass of CAAnnotatedClass then it will
+            % provide additional annotations that we can use.
+            methodDocumentation = MethodDocumentation.empty(0,0);
+            classMetadata = meta.class.fromName(className);
+
+            if classMetadata.Name <= ?CAAnnotatedClass
+                propertyAnnotations = feval(classMetadata.Name + ".classDefinedPropertyAnnotations");
+                for i=1:length(propertyAnnotations)
+                    prop = propertyAnnotations(i);
+                    metadata = MethodDocumentation(prop.name);
+                    metadata.addMetadataFromDetailedDescription(prop.detailedDescription);
+                    metadata.definingClassName = className;
+                    metadata.addDeclaringClass(className);
+                    metadata.shortDescription = prop.description;
+
+                    if isa(propertyAnnotations(i),'CADimensionProperty')
+                        metadata.functionType = FunctionType.transformDimension;
+                        metadata.units = prop.units;
+                    elseif isa(propertyAnnotations(i),'CANumericProperty')
+                        metadata.functionType = FunctionType.transformProperty;
+                        metadata.units = prop.units;
+                        metadata.dimensions = prop.dimensions;
+                        metadata.isComplex = prop.isComplex;
+                    end
+                end
+            end
+            
+        end
+
     end
 end
