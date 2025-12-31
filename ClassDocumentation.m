@@ -233,7 +233,7 @@ classdef ClassDocumentation < handle
             txt = string(txt);
 
             % Normalize newlines
-            txt = replace(txt, ["\r\n", "\r"], "\n");
+            txt = regexprep(txt, '\r\n?|\n', '\n');
 
             % Split into lines
             lines = splitlines(txt);
