@@ -70,6 +70,8 @@ classdef ClassDocumentation < handle
             self.detailedDescription = mc.DetailedDescription;
             self.detailedDescription = ClassDocumentation.trimDeclarationFromString(self.detailedDescription);
             self.detailedDescription = Topic.trimTopicsFromString(self.detailedDescription);
+            % self.detailedDescription = regexprep(self.detailedDescription, '^[ \t]+', '', 'lineanchors');
+            self.detailedDescription = ClassDocumentation.removeCommonIndent(self.detailedDescription);
 
             self.allMethodDocumentation = ClassDocumentation.methodDocumentationFromClass(self.name);
             self.addMethodDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass(self.name));
@@ -184,7 +186,8 @@ classdef ClassDocumentation < handle
                 fprintf(fileID,'\n%s\n\n',strcat(prestring,strip(self.declaration),poststring));
             end
 
-            if ~isempty(self.detailedDescription)
+            % if ~isempty(self.detailedDescription) 
+            if ~ismissing(self.detailedDescription)
                 fprintf(fileID,'## Overview\n%s\n',self.detailedDescription);
             end
             fprintf(fileID,'\n\n## Topics\n');
@@ -217,6 +220,57 @@ classdef ClassDocumentation < handle
         function trimmedString = trimDeclarationFromString(string)
             declarationExpression = '- declaration:(?<declaration>[^\r\n]+)(?:$|\n)';
             trimmedString  = regexprep(string,declarationExpression,'','ignorecase');
+        end
+
+        function out = removeCommonIndent(txt)
+            % removeCommonIndent  Remove common leading whitespace from all non-blank lines
+            %
+            %   out = removeCommonIndent(txt)
+            %
+            % Works for char arrays, char vectors, and string scalars.
+
+            % Normalize to string
+            txt = string(txt);
+
+            % Normalize newlines
+            txt = replace(txt, ["\r\n", "\r"], "\n");
+
+            % Split into lines
+            lines = splitlines(txt);
+
+            % Identify non-blank lines
+            nonBlank = strlength(strtrim(lines)) > 0;
+
+            if ~any(nonBlank)
+                out = txt;
+                return
+            end
+
+            % Count leading whitespace for each non-blank line
+            lead = zeros(sum(nonBlank),1);
+            idx = find(nonBlank);
+
+            for k = 1:numel(idx)
+                ln = lines(idx(k));
+                m = regexp(ln, '^\s*', 'match', 'once');
+                lead(k) = strlength(m);
+            end
+
+            % Minimum shared indentation
+            n = min(lead);
+
+            % Remove exactly n leading whitespace chars from every line
+            if n > 0
+                for i = 1:numel(lines)
+                    ln = lines(i);
+                    if strlength(ln) >= n
+                        lines(i) = extractAfter(ln, n);
+                    end
+                end
+            end
+
+            % Rejoin
+            out = join(lines, newline);
         end
 
         function classDocumentation = classDocumentationFromClassNames(nameArray,options)
