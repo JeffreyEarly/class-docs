@@ -23,6 +23,7 @@ classdef ClassDocumentation < handle
 
         allMethodDocumentation
         shouldExcludeAllSuperclasses
+        excludedMethodNames string = string.empty(0,1)
 
         shortDescription
         detailedDescription
@@ -44,6 +45,7 @@ classdef ClassDocumentation < handle
                 options.grandparent = []
                 options.nav_order = []
                 options.excludedSuperclasses = {'handle'};
+                options.excludedMethodNames string = string.empty(0,1)
             end
             self.name = name;
             self.websiteRootURL = options.websiteRootURL;
@@ -51,6 +53,7 @@ classdef ClassDocumentation < handle
             self.grandparent = options.grandparent;
             self.nav_order = options.nav_order;
             self.excludedSuperclasses = options.excludedSuperclasses;
+            self.excludedMethodNames = options.excludedMethodNames;
             if isequal(options.excludedSuperclasses,{'handle'})
                 self.shouldExcludeAllSuperclasses = 1;
             else
@@ -101,6 +104,9 @@ classdef ClassDocumentation < handle
         function writeToFile(self)
             % First identify which methods we want to include
             validMethods = [self.allMethodDocumentation(:).isHidden] == 0 & strcmp(string({self.allMethodDocumentation(:).access}),'public');
+            if ~isempty(self.excludedMethodNames)
+                validMethods = validMethods & ~ismember(string({self.allMethodDocumentation(:).name}),self.excludedMethodNames);
+            end
             if self.shouldExcludeAllSuperclasses == 1
                 validMethods = validMethods & arrayfun(@(a) a.isDeclaredInClass(self.name),self.allMethodDocumentation);
             else
