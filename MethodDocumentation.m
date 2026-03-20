@@ -18,6 +18,7 @@ classdef MethodDocumentation < handle
         functionType
         access = 'public'
         isHidden = 0
+        isDeveloper = false
 
         pathOfOutputFile = [] % path on the local hard drive
         pathOfFileOnWebsite = []
@@ -91,6 +92,7 @@ classdef MethodDocumentation < handle
             parameterExpression = '- parameter (?<name>[^:]+):(?<description>[^\r\n]+)(?:$|\n)';
             returnsExpression = '- returns (?<name>[^:]+):(?<description>[^\r\n]+)(?:$|\n)';
             navOrderExpression = '- nav_order:([ \t]*)(?<nav_order>[^\r\n]+)(?:$|\n)';
+            developerExpression = '- developer:([ \t]*)(?<isDeveloper>[^\r\n]+)(?:$|\n)';
             leadingWhitespaceExpression = '^[ \t]+';
 
             % Capture the subsubtopic annotation, then remove it
@@ -139,6 +141,13 @@ classdef MethodDocumentation < handle
                 self.nav_order = str2double(matchStr.nav_order);
             end
 
+            matchStr = regexpi(detailedDescription,developerExpression,'names');
+            detailedDescription = regexprep(detailedDescription,developerExpression,'','ignorecase');
+            if ~isempty(matchStr)
+                value = lower(strtrim(string(matchStr(1).isDeveloper)));
+                self.isDeveloper = ismember(value, ["true","1","yes"]);
+            end
+
 
             self.detailedDescription = regexprep(detailedDescription,leadingWhitespaceExpression,'');
         end
@@ -153,6 +162,9 @@ classdef MethodDocumentation < handle
 
             fprintf(fileID,'#  %s\n',self.name);
             fprintf(fileID,'\n%s\n',self.shortDescription);
+            if self.isDeveloper
+                fprintf(fileID,'\n> Developer documentation: this item describes internal implementation details.\n');
+            end
 
             fprintf(fileID,'\n\n---\n\n');
 

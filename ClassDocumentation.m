@@ -19,6 +19,7 @@ classdef ClassDocumentation < handle
         grandparent
         nav_order
         rootTopic
+        developerRootTopic
 
         allMethodDocumentation
         shouldExcludeAllSuperclasses
@@ -125,9 +126,11 @@ classdef ClassDocumentation < handle
             % Use the *class* detailed description to build the topic list
             mc = meta.class.fromName(self.name);
             self.rootTopic = Topic.topicsFromString(mc.DetailedDescription);
+            self.developerRootTopic = Topic.topicsFromString(mc.DetailedDescription);
             % Then use the *method* information to add new topics and
             % assign methods to existing topics.
-            ClassDocumentation.addPropertyAndMethodsToTopics(self.rootTopic,methodDocumentationNameMap);
+            ClassDocumentation.addPropertyAndMethodsToTopics(self.rootTopic,methodDocumentationNameMap,includeDeveloper=false);
+            ClassDocumentation.addPropertyAndMethodsToTopics(self.developerRootTopic,methodDocumentationNameMap,includeDeveloper=true);
 
             if ~exist(self.pathOfClassFolderOnHardDrive,'dir')
                 mkdir(self.pathOfClassFolderOnHardDrive);
@@ -196,6 +199,14 @@ classdef ClassDocumentation < handle
             % category name
             for iSubtopic = 1:length(self.rootTopic.subtopics)
                 ClassDocumentation.writeMarkdownForTopic(self.rootTopic.subtopics(iSubtopic),fileID,'',self.pathOfClassFolderOnWebsite);
+            end
+
+            if ClassDocumentation.topicHasContent(self.developerRootTopic)
+                fprintf(fileID,'\n\n## Developer Topics\n');
+                fprintf(fileID,'These items document internal implementation details and are not part of the primary public API.\n');
+                for iSubtopic = 1:length(self.developerRootTopic.subtopics)
+                    ClassDocumentation.writeMarkdownForTopic(self.developerRootTopic.subtopics(iSubtopic),fileID,'',self.pathOfClassFolderOnWebsite);
+                end
             end
 
             fprintf(fileID,'\n\n---');
@@ -309,7 +320,20 @@ classdef ClassDocumentation < handle
 
         end
 
-        function addPropertyAndMethodsToTopics(rootTopic,metadataNameMap)
+        function flag = topicHasContent(topic)
+            flag = ~isempty(topic.methodAnnotations);
+            if flag
+                return;
+            end
+            for iSubtopic = 1:length(topic.subtopics)
+                if ClassDocumentation.topicHasContent(topic.subtopics(iSubtopic))
+                    flag = true;
+                    return;
+                end
+            end
+        end
+
+        function addPropertyAndMethodsToTopics(rootTopic,metadataNameMap,options)
             % Adds methods and property metadata to the topic list
             %
             % - Parameter rootTopic: the rootTopic returned by topicsFromClass
@@ -317,6 +341,7 @@ classdef ClassDocumentation < handle
             arguments
                 rootTopic Topic
                 metadataNameMap containers.Map
+                options.includeDeveloper (1,1) logical = false
             end
 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -330,6 +355,10 @@ classdef ClassDocumentation < handle
             otherTopic = Topic('Other');
             for i=1:length(methodNames)
                 metadata = metadataNameMap(methodNames{i});
+
+                if metadata.isDeveloper ~= options.includeDeveloper
+                    continue;
+                end
 
                 % if the method has no topic, assign it to the 'other' topic we created
                 if isempty(metadata.topic)
