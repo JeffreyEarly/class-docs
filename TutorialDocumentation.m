@@ -157,6 +157,7 @@ classdef TutorialDocumentation < handle
             fprintf(fileID, "title: %s\n", char(options.title));
             fprintf(fileID, "nav_order: %d\n", options.nav_order);
             fprintf(fileID, "has_children: true\n");
+            fprintf(fileID, "mathjax: true\n");
             fprintf(fileID, "permalink: /tutorials\n");
             fprintf(fileID, "---\n\n");
             fprintf(fileID, "# %s\n\n", char(options.title));
@@ -196,6 +197,7 @@ classdef TutorialDocumentation < handle
             fprintf(fileID, "title: %s\n", char(self.title));
             fprintf(fileID, "parent: Tutorials\n");
             fprintf(fileID, "nav_order: %d\n", self.nav_order);
+            fprintf(fileID, "mathjax: true\n");
             fprintf(fileID, "permalink: /tutorials/%s\n", char(self.slug));
             fprintf(fileID, "---\n\n");
 
