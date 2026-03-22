@@ -2,6 +2,7 @@ classdef TutorialBuildRuntime < handle
     properties
         assetFolder string
         assetPagePrefix string
+        comparisonAssetFolder string = ""
         figureRecords struct = struct("Name", {}, "Caption", {}, "RelativePath", {})
     end
 
@@ -10,10 +11,12 @@ classdef TutorialBuildRuntime < handle
             arguments
                 assetFolder (1,1) string
                 options.assetPagePrefix (1,1) string = "./"
+                options.comparisonAssetFolder (1,1) string = ""
             end
 
             self.assetFolder = assetFolder;
             self.assetPagePrefix = options.assetPagePrefix;
+            self.comparisonAssetFolder = options.comparisonAssetFolder;
         end
 
         function captureFigure(self, name, options)
@@ -36,8 +39,22 @@ classdef TutorialBuildRuntime < handle
             end
 
             fileName = figureName + ".png";
-            exportgraphics(options.Figure, fullfile(self.assetFolder, fileName), ...
-                Resolution=options.Resolution);
+            targetPath = fullfile(self.assetFolder, fileName);
+            temporaryPath = string(tempname()) + ".png";
+            exportgraphics(options.Figure, temporaryPath, Resolution=options.Resolution);
+
+            comparisonPath = "";
+            if self.comparisonAssetFolder ~= ""
+                comparisonPath = fullfile(self.comparisonAssetFolder, fileName);
+            end
+
+            if comparisonPath ~= "" && isfile(comparisonPath) ...
+                    && TutorialBuildRuntime.imagesMatch(temporaryPath, comparisonPath)
+                copyfile(comparisonPath, targetPath, "f");
+                delete(temporaryPath);
+            else
+                movefile(temporaryPath, targetPath, "f");
+            end
 
             self.figureRecords(end+1) = struct( ...
                 "Name", figureName, ...
@@ -51,6 +68,16 @@ classdef TutorialBuildRuntime < handle
     end
 
     methods (Static, Access = private)
+        function tf = imagesMatch(firstPath, secondPath)
+            [firstImage, ~, firstAlpha] = imread(firstPath);
+            [secondImage, ~, secondAlpha] = imread(secondPath);
+
+            tf = isequal(size(firstImage), size(secondImage)) ...
+                && strcmp(class(firstImage), class(secondImage)) ...
+                && isequal(firstImage, secondImage) ...
+                && isequal(firstAlpha, secondAlpha);
+        end
+
         function slug = slugify(textValue)
             slug = lower(strtrim(string(textValue)));
             slug = regexprep(slug, "[^a-z0-9]+", "-");

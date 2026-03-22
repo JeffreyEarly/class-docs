@@ -16,9 +16,11 @@ classdef TutorialDocumentation < handle
         websiteFolder string
         websiteRootURL string
         executionPaths string = string.empty(0,1)
+        previousBuildFolder string = ""
 
         pathOfOutputFile string
         pathOfAssetFolderOnHardDrive string
+        pathOfPreviousAssetFolderOnHardDrive string = ""
         assetPagePrefix string
     end
 
@@ -31,6 +33,7 @@ classdef TutorialDocumentation < handle
                 options.websiteRootURL {mustBeTextScalar} = ""
                 options.executionPaths string = string.empty(0,1)
                 options.sourceRoot {mustBeTextScalar} = ""
+                options.previousBuildFolder {mustBeTextScalar} = ""
             end
 
             sourcePath = TutorialDocumentation.canonicalPath(string(sourcePath));
@@ -48,10 +51,17 @@ classdef TutorialDocumentation < handle
             self.websiteFolder = string(options.websiteFolder);
             self.websiteRootURL = string(options.websiteRootURL);
             self.executionPaths = reshape(string(options.executionPaths), [], 1);
+            if string(options.previousBuildFolder) ~= ""
+                self.previousBuildFolder = TutorialDocumentation.canonicalPath(string(options.previousBuildFolder));
+            end
 
             self.pathOfOutputFile = fullfile(self.buildFolder, self.websiteFolder, self.slug + ".md");
             self.pathOfAssetFolderOnHardDrive = fullfile(self.buildFolder, self.websiteFolder, self.slug);
             self.assetPagePrefix = "./" + self.slug + "/";
+            if self.previousBuildFolder ~= ""
+                self.pathOfPreviousAssetFolderOnHardDrive = ...
+                    fullfile(self.previousBuildFolder, self.websiteFolder, self.slug);
+            end
 
             if string(options.sourceRoot) ~= ""
                 self.sourceRelativePath = TutorialDocumentation.relativePathFromRoot( ...
@@ -63,7 +73,8 @@ classdef TutorialDocumentation < handle
 
         function writeToFile(self)
             runtime = TutorialBuildRuntime(self.pathOfAssetFolderOnHardDrive, ...
-                assetPagePrefix=self.assetPagePrefix);
+                assetPagePrefix=self.assetPagePrefix, ...
+                comparisonAssetFolder=self.pathOfPreviousAssetFolderOnHardDrive);
 
             oldPath = path;
             pathCleanup = onCleanup(@() path(oldPath)); %#ok<NASGU>
@@ -103,6 +114,7 @@ classdef TutorialDocumentation < handle
                 options.websiteRootURL {mustBeTextScalar} = ""
                 options.executionPaths string = string.empty(0,1)
                 options.sourceRoot {mustBeTextScalar} = ""
+                options.previousBuildFolder {mustBeTextScalar} = ""
             end
 
             sourceFiles = reshape(string(sourceFiles), [], 1);
@@ -113,7 +125,8 @@ classdef TutorialDocumentation < handle
                     websiteFolder=options.websiteFolder, ...
                     websiteRootURL=options.websiteRootURL, ...
                     executionPaths=options.executionPaths, ...
-                    sourceRoot=options.sourceRoot);
+                    sourceRoot=options.sourceRoot, ...
+                    previousBuildFolder=options.previousBuildFolder);
             end
 
             tutorialDocumentation = TutorialDocumentation.assignNavOrder(tutorialDocumentation);
