@@ -33,7 +33,8 @@ classdef TutorialDocumentation < handle
                 options.sourceRoot {mustBeTextScalar} = ""
             end
 
-            parsedTutorial = TutorialDocumentation.parseSourceFile(string(sourcePath));
+            sourcePath = TutorialDocumentation.canonicalPath(string(sourcePath));
+            parsedTutorial = TutorialDocumentation.parseSourceFile(sourcePath);
 
             self.sourcePath = string(sourcePath);
             self.sourceFile = parsedTutorial.SourceFile;
@@ -43,7 +44,7 @@ classdef TutorialDocumentation < handle
             self.nav_order = parsedTutorial.NavOrder;
             self.sections = parsedTutorial.Sections;
 
-            self.buildFolder = string(options.buildFolder);
+            self.buildFolder = TutorialDocumentation.canonicalPath(string(options.buildFolder));
             self.websiteFolder = string(options.websiteFolder);
             self.websiteRootURL = string(options.websiteRootURL);
             self.executionPaths = reshape(string(options.executionPaths), [], 1);
@@ -54,7 +55,7 @@ classdef TutorialDocumentation < handle
 
             if string(options.sourceRoot) ~= ""
                 self.sourceRelativePath = TutorialDocumentation.relativePathFromRoot( ...
-                    self.sourcePath, string(options.sourceRoot));
+                    self.sourcePath, TutorialDocumentation.canonicalPath(string(options.sourceRoot)));
             else
                 self.sourceRelativePath = self.sourceFile;
             end
@@ -443,6 +444,10 @@ classdef TutorialDocumentation < handle
             else
                 relativePath = string(filePath);
             end
+        end
+
+        function pathValue = canonicalPath(pathValue)
+            pathValue = string(java.io.File(char(pathValue)).getCanonicalPath());
         end
     end
 end
