@@ -54,7 +54,7 @@ classdef MethodDocumentation < handle
                 self MethodDocumentation
                 mp meta.method
             end
-            self.access = mp.Access;
+            self.access = MethodDocumentation.normalizedAccessText(mp.Access);
             self.isHidden = mp.Hidden;
             self.definingClassName = mp.DefiningClass.Name;
             self.shortDescription = mp.Description;
@@ -72,7 +72,7 @@ classdef MethodDocumentation < handle
                 self MethodDocumentation
                 mp meta.property
             end
-            self.access = mp.GetAccess;
+            self.access = MethodDocumentation.normalizedAccessText(mp.GetAccess);
             self.isHidden = mp.Hidden;
             self.definingClassName = mp.DefiningClass.Name;
             self.shortDescription = mp.Description;
@@ -234,6 +234,47 @@ classdef MethodDocumentation < handle
             end
 
             fclose(fileID);
+        end
+    end
+
+    methods (Static, Access = private)
+        % Normalize reflected access metadata to simple text labels for
+        % documentation filtering. For example, MATLAB reports
+        % `methods (Access = {?FriendA, ?FriendB})` as a cell containing
+        % `meta.class` entries, and we treat that friend-only case as
+        % `"private"` because `class-docs` only needs to distinguish
+        % public API from non-public members when deciding what to publish.
+        function accessText = normalizedAccessText(access)
+            if isstring(access) && isscalar(access)
+                accessText = access;
+                return
+            end
+
+            if ischar(access)
+                accessText = string(access);
+                return
+            end
+
+            if iscell(access)
+                accessEntries = strings(numel(access), 1);
+                for iEntry = 1:numel(access)
+                    accessEntries(iEntry) = MethodDocumentation.normalizedAccessText(access{iEntry});
+                end
+
+                if any(strcmpi(accessEntries, "public"))
+                    accessText = "public";
+                else
+                    accessText = "private";
+                end
+                return
+            end
+
+            if isa(access, "meta.class")
+                accessText = string(access.Name);
+                return
+            end
+
+            accessText = string(class(access));
         end
     end
 end
