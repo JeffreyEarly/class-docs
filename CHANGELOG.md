@@ -1,5 +1,8 @@
 # Version History
 
+## [1.2.0] - 2026-04-10
+- added scoped annotation-sidecar loading support for documentation builders so generated class reference pages keep markdown sidecars without incurring annotation sidecar lookup overhead in ordinary runtime code
+
 ## [1.1.1] - 2026-03-22
 - Preserved existing tutorial image files when regenerated figures are pixel-identical, reducing unnecessary PNG churn in downstream repos
 

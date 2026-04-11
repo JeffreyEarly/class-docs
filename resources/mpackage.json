@@ -1,6 +1,6 @@
 {
     "name": "ClassDocumentation",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "id": "0cc6cbbd-b164-48a7-aedc-0fe3fab2ad93",
     "formerNames": [],
     "displayName": "Class Documentation",
@@ -14,6 +14,12 @@
     },
     "folders": [
         {
+            "path": "UnitTests",
+            "languages": [
+                "matlab"
+            ]
+        },
+        {
             "path": "Example",
             "languages": [
                 "matlab"
@@ -23,7 +29,7 @@
     "dependencies": [
         {
             "name": "ClassAnnotations",
-            "compatibleVersions": "^1.0",
+            "compatibleVersions": "^1.2",
             "id": "2fadd643-a526-49d9-ac09-2486f9d1d4b9"
         }
     ],

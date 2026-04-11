@@ -12,9 +12,14 @@ classdef WVTransformDocumentation < ClassDocumentation
                 options.parent = []
                 options.grandparent = []
                 options.nav_order = []
+                options.shouldLoadDetailedDescriptionSidecars (1,1) logical = true
             end
             superClassOptions = namedargs2cell(options);
             self@ClassDocumentation(name,superClassOptions{:});
+            cleanup = onCleanup(@() []);
+            if self.shouldLoadDetailedDescriptionSidecars
+                cleanup = CAEnableDetailedDescriptionSidecars(); %#ok<NASGU>
+            end
 
             % Overwrite the automatically extracted metadata, with our version
             dims = WVTransform.defaultDimensionAnnotations();

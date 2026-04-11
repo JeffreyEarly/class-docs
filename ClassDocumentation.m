@@ -24,6 +24,7 @@ classdef ClassDocumentation < handle
         allMethodDocumentation
         shouldExcludeAllSuperclasses
         excludedMethodNames string = string.empty(0,1)
+        shouldLoadDetailedDescriptionSidecars logical = true
 
         shortDescription
         detailedDescription
@@ -46,6 +47,7 @@ classdef ClassDocumentation < handle
                 options.nav_order = []
                 options.excludedSuperclasses = {'handle'};
                 options.excludedMethodNames string = string.empty(0,1)
+                options.shouldLoadDetailedDescriptionSidecars (1,1) logical = true
             end
             self.name = name;
             self.websiteRootURL = options.websiteRootURL;
@@ -54,6 +56,7 @@ classdef ClassDocumentation < handle
             self.nav_order = options.nav_order;
             self.excludedSuperclasses = options.excludedSuperclasses;
             self.excludedMethodNames = options.excludedMethodNames;
+            self.shouldLoadDetailedDescriptionSidecars = options.shouldLoadDetailedDescriptionSidecars;
             if isequal(options.excludedSuperclasses,{'handle'})
                 self.shouldExcludeAllSuperclasses = 1;
             else
@@ -78,7 +81,9 @@ classdef ClassDocumentation < handle
             self.detailedDescription = ClassDocumentation.removeCommonIndent(self.detailedDescription);
 
             self.allMethodDocumentation = ClassDocumentation.methodDocumentationFromClass(self.name);
-            self.addMethodDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass(self.name));
+            self.addMethodDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass( ...
+                self.name, ...
+                shouldLoadDetailedDescriptionSidecars=self.shouldLoadDetailedDescriptionSidecars));
             addlistener(self,'excludedSuperclasses','PostSet',@self.excludedSuperclassesDidChange); 
         end
 
@@ -302,11 +307,20 @@ classdef ClassDocumentation < handle
                 options.parent = []
                 options.grandparent = []
                 options.excludedSuperclasses = {'handle'};
+                options.shouldLoadDetailedDescriptionSidecars (1,1) logical = true
             end
 
             classDocumentation = ClassDocumentation.empty(length(nameArray),0);
             for iName=1:length(nameArray)
-                classDocumentation(iName) = ClassDocumentation(nameArray{iName},buildFolder=options.buildFolder,websiteFolder=options.websiteFolder,parent=options.parent,grandparent=options.grandparent,nav_order=iName,excludedSuperclasses = options.excludedSuperclasses);
+                classDocumentation(iName) = ClassDocumentation( ...
+                    nameArray{iName}, ...
+                    buildFolder=options.buildFolder, ...
+                    websiteFolder=options.websiteFolder, ...
+                    parent=options.parent, ...
+                    grandparent=options.grandparent, ...
+                    nav_order=iName, ...
+                    excludedSuperclasses=options.excludedSuperclasses, ...
+                    shouldLoadDetailedDescriptionSidecars=options.shouldLoadDetailedDescriptionSidecars);
             end
         end
 
@@ -458,13 +472,21 @@ classdef ClassDocumentation < handle
             end
         end
 
-        function methodDocumentation = methodDocumentationFromAnnotatedClass(className)
+        function methodDocumentation = methodDocumentationFromAnnotatedClass(className, options)
             % If the class is a subclass of CAAnnotatedClass then it will
             % provide additional annotations that we can use.
+            arguments
+                className
+                options.shouldLoadDetailedDescriptionSidecars (1,1) logical = true
+            end
             methodDocumentation = MethodDocumentation.empty(0,0);
             classMetadata = meta.class.fromName(className);
 
             if classMetadata <= ?CAAnnotatedClass
+                cleanup = onCleanup(@() []);
+                if options.shouldLoadDetailedDescriptionSidecars
+                    cleanup = CAEnableDetailedDescriptionSidecars(); %#ok<NASGU>
+                end
                 propertyAnnotations = feval(classMetadata.Name + ".classDefinedPropertyAnnotations");
                 for i=1:length(propertyAnnotations)
                     prop = propertyAnnotations(i);
@@ -483,6 +505,7 @@ classdef ClassDocumentation < handle
                         metadata.dimensions = prop.dimensions;
                         metadata.isComplex = prop.isComplex;
                     end
+                    methodDocumentation(end+1) = metadata;
                 end
             end
             
