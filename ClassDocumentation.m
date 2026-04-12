@@ -81,7 +81,7 @@ classdef ClassDocumentation < handle
             self.detailedDescription = ClassDocumentation.removeCommonIndent(self.detailedDescription);
 
             self.allMethodDocumentation = ClassDocumentation.methodDocumentationFromClass(self.name);
-            self.addMethodDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass( ...
+            self.mergeAnnotatedPropertyDocumentation(ClassDocumentation.methodDocumentationFromAnnotatedClass( ...
                 self.name, ...
                 shouldLoadDetailedDescriptionSidecars=self.shouldLoadDetailedDescriptionSidecars));
             addlistener(self,'excludedSuperclasses','PostSet',@self.excludedSuperclassesDidChange); 
@@ -103,6 +103,33 @@ classdef ClassDocumentation < handle
             else
                 self.allMethodDocumentation(end+1) = methodDocumentation(iDoc);
             end
+            end
+        end
+
+        function mergeAnnotatedPropertyDocumentation(self, annotatedDocumentation)
+            % Merge class-defined property annotations into reflected
+            % property documentation without overwriting richer reflected
+            % metadata such as visibility, authored topic paths, and
+            % declarations.
+            classMetadata = meta.class.fromName(self.name);
+            propertyNames = string({classMetadata.PropertyList.Name});
+
+            for iDoc = 1:length(annotatedDocumentation)
+                metadata = annotatedDocumentation(iDoc);
+                if ~ismember(metadata.name, propertyNames)
+                    self.addMethodDocumentation(metadata);
+                    continue;
+                end
+
+                existingIndex = find(strcmp(string({self.allMethodDocumentation(:).name}), metadata.name), 1);
+                if isempty(existingIndex)
+                    self.addMethodDocumentation(metadata);
+                    continue;
+                end
+
+                mergedMetadata = self.allMethodDocumentation(existingIndex);
+                mergedMetadata.mergeAnnotatedPropertyDocumentation(metadata);
+                self.allMethodDocumentation(existingIndex) = mergedMetadata;
             end
         end
 
@@ -495,6 +522,7 @@ classdef ClassDocumentation < handle
                     metadata.definingClassName = className;
                     metadata.addDeclaringClass(className);
                     metadata.shortDescription = prop.description;
+                    metadata.functionType = FunctionType.instanceProperty;
 
                     if isa(propertyAnnotations(i),'CADimensionProperty')
                         metadata.functionType = FunctionType.transformDimension;

@@ -79,6 +79,61 @@ classdef MethodDocumentation < handle
             self.functionType = FunctionType.instanceProperty;
         end
 
+        function mergeAnnotatedPropertyDocumentation(self, annotatedMetadata)
+            arguments
+                self MethodDocumentation
+                annotatedMetadata MethodDocumentation
+            end
+
+            if MethodDocumentation.shouldCopyValue(self.shortDescription, annotatedMetadata.shortDescription)
+                self.shortDescription = annotatedMetadata.shortDescription;
+            end
+            if MethodDocumentation.shouldCopyValue(self.detailedDescription, annotatedMetadata.detailedDescription)
+                self.detailedDescription = annotatedMetadata.detailedDescription;
+            end
+            if MethodDocumentation.shouldCopyValue(self.declaration, annotatedMetadata.declaration)
+                self.declaration = annotatedMetadata.declaration;
+            end
+            if isempty(self.topic) && ~isempty(annotatedMetadata.topic)
+                self.topic = annotatedMetadata.topic;
+                self.subtopic = annotatedMetadata.subtopic;
+                self.subsubtopic = annotatedMetadata.subsubtopic;
+            elseif ~isempty(self.topic) && isequal(string(self.topic), string(annotatedMetadata.topic))
+                if isempty(self.subtopic) && ~isempty(annotatedMetadata.subtopic)
+                    self.subtopic = annotatedMetadata.subtopic;
+                    self.subsubtopic = annotatedMetadata.subsubtopic;
+                elseif ~isempty(self.subtopic) && isequal(string(self.subtopic), string(annotatedMetadata.subtopic)) && ...
+                        isempty(self.subsubtopic) && ~isempty(annotatedMetadata.subsubtopic)
+                    self.subsubtopic = annotatedMetadata.subsubtopic;
+                end
+            end
+            if isempty(self.parameters) && ~isempty(annotatedMetadata.parameters)
+                self.parameters = annotatedMetadata.parameters;
+            end
+            if isempty(self.returns) && ~isempty(annotatedMetadata.returns)
+                self.returns = annotatedMetadata.returns;
+            end
+            if isinf(self.nav_order) && ~isinf(annotatedMetadata.nav_order)
+                self.nav_order = annotatedMetadata.nav_order;
+            end
+            if annotatedMetadata.isDeveloper
+                self.isDeveloper = true;
+            end
+            if ~isempty(annotatedMetadata.functionType) && ...
+                    (isempty(self.functionType) || self.functionType == FunctionType.instanceProperty)
+                self.functionType = annotatedMetadata.functionType;
+            end
+            if MethodDocumentation.shouldCopyValue(self.dimensions, annotatedMetadata.dimensions)
+                self.dimensions = annotatedMetadata.dimensions;
+            end
+            if MethodDocumentation.shouldCopyValue(self.units, annotatedMetadata.units)
+                self.units = annotatedMetadata.units;
+            end
+            if MethodDocumentation.shouldCopyValue(self.isComplex, annotatedMetadata.isComplex)
+                self.isComplex = annotatedMetadata.isComplex;
+            end
+        end
+
         function self = addMetadataFromDetailedDescription(self,detailedDescription)
             if isempty(detailedDescription)
                 return;
@@ -238,6 +293,29 @@ classdef MethodDocumentation < handle
     end
 
     methods (Static, Access = private)
+        function tf = shouldCopyValue(existingValue, sourceValue)
+            tf = MethodDocumentation.isMetadataValueEmpty(existingValue) && ~MethodDocumentation.isMetadataValueEmpty(sourceValue);
+        end
+
+        function tf = isMetadataValueEmpty(value)
+            if isempty(value)
+                tf = true;
+                return
+            end
+
+            if isstring(value)
+                tf = all(strlength(value) == 0);
+                return
+            end
+
+            if ischar(value)
+                tf = isempty(strtrim(value));
+                return
+            end
+
+            tf = false;
+        end
+
         % Normalize reflected access metadata to simple text labels for
         % documentation filtering. For example, MATLAB reports
         % `methods (Access = {?FriendA, ?FriendB})` as a cell containing
