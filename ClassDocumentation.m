@@ -523,6 +523,10 @@ classdef ClassDocumentation < handle
                     metadata.addDeclaringClass(className);
                     metadata.shortDescription = prop.description;
                     metadata.functionType = FunctionType.instanceProperty;
+                    if isa(prop, 'CAObjectProperty')
+                        metadata.propertyClassName = prop.className;
+                        metadata.propertySizeText = prop.sizeText;
+                    end
 
                     if isa(propertyAnnotations(i),'CADimensionProperty')
                         metadata.functionType = FunctionType.transformDimension;

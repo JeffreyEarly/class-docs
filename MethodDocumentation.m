@@ -23,6 +23,9 @@ classdef MethodDocumentation < handle
         pathOfOutputFile = [] % path on the local hard drive
         pathOfFileOnWebsite = []
 
+        propertyClassName = []
+        propertySizeText = []
+
         dimensions
         units
         isComplex
@@ -77,6 +80,7 @@ classdef MethodDocumentation < handle
             self.definingClassName = mp.DefiningClass.Name;
             self.shortDescription = mp.Description;
             self.functionType = FunctionType.instanceProperty;
+            [self.propertyClassName, self.propertySizeText] = MethodDocumentation.typeMetadataFromPropertyValidation(mp.Validation);
         end
 
         function mergeAnnotatedPropertyDocumentation(self, annotatedMetadata)
@@ -131,6 +135,12 @@ classdef MethodDocumentation < handle
             end
             if MethodDocumentation.shouldCopyValue(self.isComplex, annotatedMetadata.isComplex)
                 self.isComplex = annotatedMetadata.isComplex;
+            end
+            if MethodDocumentation.shouldCopyValue(self.propertyClassName, annotatedMetadata.propertyClassName)
+                self.propertyClassName = annotatedMetadata.propertyClassName;
+            end
+            if MethodDocumentation.shouldCopyValue(self.propertySizeText, annotatedMetadata.propertySizeText)
+                self.propertySizeText = annotatedMetadata.propertySizeText;
             end
         end
 
@@ -223,6 +233,17 @@ classdef MethodDocumentation < handle
 
             fprintf(fileID,'\n\n---\n\n');
 
+            if MethodDocumentation.shouldWriteTypeSection(self)
+                fprintf(fileID,'## Type\n');
+                if ~MethodDocumentation.isMetadataValueEmpty(self.propertyClassName)
+                    fprintf(fileID,'+ Class: `%s`\n', char(string(self.propertyClassName)));
+                end
+                if ~MethodDocumentation.isMetadataValueEmpty(self.propertySizeText)
+                    fprintf(fileID,'+ Size: %s\n', char(MethodDocumentation.formattedPropertySizeText(self.propertySizeText)));
+                end
+                fprintf(fileID,'\n');
+            end
+
             if (self.functionType == FunctionType.transformProperty || self.functionType == FunctionType.stateVariable)
                 fprintf(fileID,'## Description\n');
                 if self.isComplex == 1
@@ -314,6 +335,71 @@ classdef MethodDocumentation < handle
             end
 
             tf = false;
+        end
+
+        function tf = shouldWriteTypeSection(methodDocumentation)
+            tf = MethodDocumentation.isPropertyFunctionType(methodDocumentation.functionType) && ...
+                (~MethodDocumentation.isMetadataValueEmpty(methodDocumentation.propertyClassName) || ...
+                ~MethodDocumentation.isMetadataValueEmpty(methodDocumentation.propertySizeText));
+        end
+
+        function tf = isPropertyFunctionType(functionType)
+            if isempty(functionType)
+                tf = false;
+                return
+            end
+
+            tf = isequal(functionType, FunctionType.instanceProperty) || ...
+                isequal(functionType, FunctionType.transformProperty) || ...
+                isequal(functionType, FunctionType.transformDimension) || ...
+                isequal(functionType, FunctionType.stateVariable);
+        end
+
+        function formattedText = formattedPropertySizeText(sizeText)
+            sizeText = string(sizeText);
+            if startsWith(sizeText, "(") || sizeText == ":"
+                formattedText = "`" + sizeText + "`";
+            else
+                formattedText = sizeText;
+            end
+        end
+
+        function [className, sizeText] = typeMetadataFromPropertyValidation(validation)
+            className = [];
+            sizeText = [];
+
+            if isempty(validation)
+                return
+            end
+
+            if ~isempty(validation.Class)
+                className = string(validation.Class.Name);
+            end
+
+            if isempty(validation.Size)
+                return
+            end
+
+            dimensionTexts = strings(1, numel(validation.Size));
+            for iDimension = 1:numel(validation.Size)
+                dimensionText = MethodDocumentation.normalizedArrayDimensionText(validation.Size(iDimension));
+                if strlength(dimensionText) == 0
+                    return
+                end
+                dimensionTexts(iDimension) = dimensionText;
+            end
+
+            sizeText = "(" + join(dimensionTexts, ",") + ")";
+        end
+
+        function dimensionText = normalizedArrayDimensionText(arrayDimension)
+            dimensionText = "";
+
+            if isa(arrayDimension, 'matlab.metadata.FixedDimension')
+                dimensionText = string(arrayDimension.Length);
+            elseif isa(arrayDimension, 'matlab.metadata.UnrestrictedDimension')
+                dimensionText = ":";
+            end
         end
 
         % Normalize reflected access metadata to simple text labels for
