@@ -1,5 +1,8 @@
 # Version History
 
+## [1.3.0] - 2026-04-13
+- added explicit `tutorialOutputCapture(...)` support so tutorials can emit captured console output as fenced markdown blocks with preserved ordering, normalized text cleanup, and regression coverage
+
 ## [1.2.0] - 2026-04-10
 - added scoped annotation-sidecar loading support for documentation builders so generated class reference pages keep markdown sidecars without incurring annotation sidecar lookup overhead in ordinary runtime code
 - normalized reflected friend-access metadata so friend-only methods and properties stay out of published public API docs
