@@ -6,6 +6,7 @@ classdef TutorialBuildRuntime < handle
         sourcePath string = ""
         figureRecords struct = struct("Name", {}, "Caption", {}, "RelativePath", {})
         movieRecords struct = struct("Name", {}, "Caption", {}, "RelativePath", {}, "PosterRelativePath", {})
+        outputRecords struct = struct("Caption", {}, "Language", {}, "Text", {})
     end
 
     methods
@@ -129,12 +130,40 @@ classdef TutorialBuildRuntime < handle
                 "PosterRelativePath", posterRelativePath);
         end
 
+        function captureOutput(self, source, options)
+            arguments
+                self (1,1) TutorialBuildRuntime
+                source
+                options.Caption string = ""
+                options.Language {mustBeTextScalar} = "text"
+            end
+
+            if isa(source, "function_handle")
+                outputText = string(evalc("source()"));
+            elseif isstring(source) || ischar(source)
+                mustBeTextScalar(source)
+                outputText = string(source);
+            else
+                error("TutorialBuildRuntime:InvalidOutputSource", ...
+                    "tutorialOutputCapture source must be a function handle or a text scalar.");
+            end
+
+            self.outputRecords(end+1) = struct( ...
+                "Caption", string(options.Caption), ...
+                "Language", string(options.Language), ...
+                "Text", TutorialBuildRuntime.normalizeCapturedOutput(outputText));
+        end
+
         function figureRecords = getFigureRecords(self)
             figureRecords = self.figureRecords;
         end
 
         function movieRecords = getMovieRecords(self)
             movieRecords = self.movieRecords;
+        end
+
+        function outputRecords = getOutputRecords(self)
+            outputRecords = self.outputRecords;
         end
     end
 
@@ -337,6 +366,46 @@ classdef TutorialBuildRuntime < handle
 
         function pathValue = canonicalPath(pathValue)
             pathValue = string(java.io.File(char(pathValue)).getCanonicalPath());
+        end
+
+        function outputText = normalizeCapturedOutput(outputText)
+            outputText = replace(string(outputText), sprintf("\r\n"), newline);
+            outputText = replace(outputText, sprintf("\r"), newline);
+            outputText = string(TutorialBuildRuntime.applyBackspaces(char(outputText)));
+            outputText = regexprep(char(outputText), "</?strong>", "");
+            outputLines = splitlines(string(outputText));
+            outputLines = TutorialBuildRuntime.trimBlankEdges(outputLines);
+            outputText = join(outputLines, newline);
+        end
+
+        function textValue = applyBackspaces(textValue)
+            characters = char(textValue);
+            cleanedCharacters = strings(0, 1);
+            for iCharacter = 1:numel(characters)
+                currentCharacter = characters(iCharacter);
+                if currentCharacter == char(8)
+                    if ~isempty(cleanedCharacters)
+                        cleanedCharacters(end) = [];
+                    end
+                else
+                    cleanedCharacters(end+1, 1) = string(currentCharacter); %#ok<AGROW>
+                end
+            end
+            textValue = char(join(cleanedCharacters, ""));
+        end
+
+        function lines = trimBlankEdges(lines)
+            if isempty(lines)
+                return;
+            end
+
+            isBlank = @(value) strlength(strtrim(string(value))) == 0;
+            while ~isempty(lines) && isBlank(lines(1))
+                lines(1) = [];
+            end
+            while ~isempty(lines) && isBlank(lines(end))
+                lines(end) = [];
+            end
         end
     end
 end

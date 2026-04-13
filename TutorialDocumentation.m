@@ -12,6 +12,7 @@ classdef TutorialDocumentation < handle
         sections struct = struct("Heading", {}, "Blocks", {})
         figures struct = struct("Name", {}, "Caption", {}, "RelativePath", {})
         movies struct = struct("Name", {}, "Caption", {}, "RelativePath", {}, "PosterRelativePath", {})
+        outputs struct = struct("Caption", {}, "Language", {}, "Text", {})
 
         buildFolder string
         websiteFolder string
@@ -113,6 +114,7 @@ classdef TutorialDocumentation < handle
 
             tutorialFigureCapture = @(name, varargin) runtime.captureFigure(name, varargin{:}); %#ok<NASGU>
             tutorialMovieCapture = @(name, varargin) runtime.captureMovie(name, varargin{:}); %#ok<NASGU>
+            tutorialOutputCapture = @(source, varargin) runtime.captureOutput(source, varargin{:}); %#ok<NASGU>
             close all force hidden
             try
                 run(char(self.sourcePath));
@@ -126,6 +128,7 @@ classdef TutorialDocumentation < handle
 
             self.figures = runtime.getFigureRecords();
             self.movies = runtime.getMovieRecords();
+            self.outputs = runtime.getOutputRecords();
             self.writeMarkdownPage();
             TutorialDocumentation.writeTextFile(self.pathOfBuildStampFile, buildStampText);
             close all force hidden
@@ -259,6 +262,11 @@ classdef TutorialDocumentation < handle
                     "Tutorial '%s' registered %d movies but contains %d tutorialMovieCapture markers.", ...
                     self.sourceFile, numel(self.movies), TutorialDocumentation.countBlockType(self.sections, "movie"));
             end
+            if numel(self.outputs) ~= TutorialDocumentation.countBlockType(self.sections, "output")
+                error("TutorialDocumentation:OutputMismatch", ...
+                    "Tutorial '%s' registered %d outputs but contains %d tutorialOutputCapture markers.", ...
+                    self.sourceFile, numel(self.outputs), TutorialDocumentation.countBlockType(self.sections, "output"));
+            end
 
             outputFolder = fileparts(self.pathOfOutputFile);
             if ~isfolder(outputFolder)
@@ -318,6 +326,12 @@ classdef TutorialDocumentation < handle
                             if movieRecord.Caption ~= ""
                                 fprintf(fileID, "*%s*\n\n", char(movieRecord.Caption));
                             end
+                        case "output"
+                            outputRecord = self.outputs(block.OutputIndex);
+                            fprintf(fileID, "```%s\n%s\n```\n\n", char(outputRecord.Language), char(outputRecord.Text));
+                            if outputRecord.Caption ~= ""
+                                fprintf(fileID, "*%s*\n\n", char(outputRecord.Caption));
+                            end
                         otherwise
                             error("TutorialDocumentation:UnknownBlockType", ...
                                 "Unknown tutorial block type '%s'.", block.Type);
@@ -368,6 +382,7 @@ classdef TutorialDocumentation < handle
             codeBuffer = strings(0,1);
             nextFigureIndex = 0;
             nextMovieIndex = 0;
+            nextOutputIndex = 0;
             inMetadataSection = false;
 
             iLine = 1;
@@ -422,10 +437,13 @@ classdef TutorialDocumentation < handle
                     switch captureType
                         case "figure"
                             nextFigureIndex = nextFigureIndex + 1;
-                            currentBlocks(end+1) = TutorialDocumentation.assetBlock("figure", nextFigureIndex, NaN); %#ok<AGROW>
+                            currentBlocks(end+1) = TutorialDocumentation.assetBlock("figure", nextFigureIndex, NaN, NaN); %#ok<AGROW>
                         case "movie"
                             nextMovieIndex = nextMovieIndex + 1;
-                            currentBlocks(end+1) = TutorialDocumentation.assetBlock("movie", NaN, nextMovieIndex); %#ok<AGROW>
+                            currentBlocks(end+1) = TutorialDocumentation.assetBlock("movie", NaN, nextMovieIndex, NaN); %#ok<AGROW>
+                        case "output"
+                            nextOutputIndex = nextOutputIndex + 1;
+                            currentBlocks(end+1) = TutorialDocumentation.assetBlock("output", NaN, NaN, nextOutputIndex); %#ok<AGROW>
                     end
 
                     iLine = TutorialDocumentation.advancePastCaptureStatement(lines, iLine);
@@ -611,15 +629,15 @@ classdef TutorialDocumentation < handle
         end
 
         function blocks = emptyBlocks()
-            blocks = struct("Type", {}, "Text", {}, "FigureIndex", {}, "MovieIndex", {});
+            blocks = struct("Type", {}, "Text", {}, "FigureIndex", {}, "MovieIndex", {}, "OutputIndex", {});
         end
 
         function block = textOrCodeBlock(blockType, blockText)
-            block = struct("Type", blockType, "Text", string(blockText), "FigureIndex", NaN, "MovieIndex", NaN);
+            block = struct("Type", blockType, "Text", string(blockText), "FigureIndex", NaN, "MovieIndex", NaN, "OutputIndex", NaN);
         end
 
-        function block = assetBlock(blockType, figureIndex, movieIndex)
-            block = struct("Type", blockType, "Text", "", "FigureIndex", figureIndex, "MovieIndex", movieIndex);
+        function block = assetBlock(blockType, figureIndex, movieIndex, outputIndex)
+            block = struct("Type", blockType, "Text", "", "FigureIndex", figureIndex, "MovieIndex", movieIndex, "OutputIndex", outputIndex);
         end
 
         function captureType = captureStatementType(line)
@@ -630,6 +648,10 @@ classdef TutorialDocumentation < handle
             end
             if ~isempty(regexp(char(line), 'tutorialMovieCapture\(', 'once'))
                 captureType = "movie";
+                return;
+            end
+            if ~isempty(regexp(char(line), 'tutorialOutputCapture\(', 'once'))
+                captureType = "output";
             end
         end
 
@@ -654,7 +676,7 @@ classdef TutorialDocumentation < handle
 
         function tf = isCaptureGuardLine(line)
             tf = ~isempty(regexp(char(line), ...
-                '^\s*if\b.*(?:tutorialFigureCapture|tutorialMovieCapture).*$', ...
+                '^\s*if\b.*(?:tutorialFigureCapture|tutorialMovieCapture|tutorialOutputCapture).*$', ...
                 'once'));
         end
 
