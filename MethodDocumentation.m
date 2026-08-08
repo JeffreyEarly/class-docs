@@ -164,24 +164,24 @@ classdef MethodDocumentation < handle
             matchStr = regexpi(detailedDescription,subsubtopicExpression,'names');
             detailedDescription = regexprep(detailedDescription,subsubtopicExpression,'','ignorecase');
             if ~isempty(matchStr)
-                self.subsubtopic = strtrim(matchStr.subsubtopic);
-                self.subtopic = strtrim(matchStr.subtopic);
-                self.topic = strtrim(matchStr.topic);
+                self.subsubtopic = strtrim(matchStr(1).subsubtopic);
+                self.subtopic = strtrim(matchStr(1).subtopic);
+                self.topic = strtrim(matchStr(1).topic);
             end
 
             % Capture the subtopic annotation, then remove it
             matchStr = regexpi(detailedDescription,subtopicExpression,'names');
             detailedDescription = regexprep(detailedDescription,subtopicExpression,'','ignorecase');
             if ~isempty(matchStr)
-                self.subtopic = strtrim(matchStr.subtopic);
-                self.topic = strtrim(matchStr.topic);
+                self.subtopic = strtrim(matchStr(1).subtopic);
+                self.topic = strtrim(matchStr(1).topic);
             end
 
             % Capture the topic annotation, then remove it
             matchStr = regexpi(detailedDescription,topicExpression,'names');
             detailedDescription = regexprep(detailedDescription,topicExpression,'','ignorecase');
             if ~isempty(matchStr)
-                self.topic = strtrim(matchStr.topic);
+                self.topic = strtrim(matchStr(1).topic);
             end
 
             % Capture all parameters, then remove the annotations
@@ -197,13 +197,13 @@ classdef MethodDocumentation < handle
             matchStr = regexpi(detailedDescription,declarationExpression,'names');
             detailedDescription = regexprep(detailedDescription,declarationExpression,'','ignorecase');
             if ~isempty(matchStr)
-                self.declaration = matchStr.declaration;
+                self.declaration = matchStr(1).declaration;
             end
 
             matchStr = regexpi(detailedDescription,navOrderExpression,'names');
             detailedDescription = regexprep(detailedDescription,navOrderExpression,'','ignorecase');
             if ~isempty(matchStr)
-                self.nav_order = str2double(matchStr.nav_order);
+                self.nav_order = str2double(matchStr(1).nav_order);
             end
 
             matchStr = regexpi(detailedDescription,developerExpression,'names');
@@ -217,13 +217,20 @@ classdef MethodDocumentation < handle
             self.detailedDescription = regexprep(detailedDescription,leadingWhitespaceExpression,'');
         end
 
-        function writeToFile(self,parentName,pageNumber)
+        function writeToFile(self,parentName,pageNumber,grandparentName)
+            if nargin < 4 || isempty(grandparentName)
+                grandparentName = "Classes";
+            end
             if isempty(self.pathOfOutputFile)
                 error('Path not set!');
             end
             fileID = fopen(self.pathOfOutputFile,'w');
 
-            fprintf(fileID,'---\nlayout: default\ntitle: %s\nparent: %s\ngrand_parent: Classes\nnav_order: %d\nmathjax: true\n---\n\n',self.name,parentName,pageNumber);
+            frontMatterFormat = [ ...
+                '---\nlayout: default\ntitle: %s\n', ...
+                'parent: %s\ngrand_parent: %s\n', ...
+                'nav_order: %d\nmathjax: true\n---\n\n'];
+            fprintf(fileID,frontMatterFormat,self.name,parentName,grandparentName,pageNumber);
 
             fprintf(fileID,'#  %s\n',self.name);
             fprintf(fileID,'\n%s\n',self.shortDescription);
