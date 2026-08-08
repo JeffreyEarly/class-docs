@@ -1,7 +1,10 @@
 # Version History
 
-## [1.3.0] - 2026-04-13
+## [1.3.0] - 2026-08-08
 - added explicit `tutorialOutputCapture(...)` support so tutorials can emit captured console output as fenced markdown blocks with preserved ordering, normalized text cleanup, and regression coverage
+- preserved class landing pages when an API member is named `index`
+- added configurable method-page grandparents while retaining the existing `Classes` default
+- made repeated scalar metadata deterministic by using the first occurrence while preserving repeatable parameter and return metadata
 
 ## [1.2.0] - 2026-04-10
 - added scoped annotation-sidecar loading support for documentation builders so generated class reference pages keep markdown sidecars without incurring annotation sidecar lookup overhead in ordinary runtime code

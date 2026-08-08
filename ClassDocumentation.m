@@ -9,6 +9,11 @@ classdef ClassDocumentation < handle
     % The metadata for the property and methods is extracted from the property
     % and method metadata (from Matlab's metaclass) as well. Each property and
     % method gets its own page.
+    %
+    % Set `parent` and `grandparent` for the generated class page. Set
+    % `methodGrandparent` to the class page's parent when method pages are
+    % nested beneath the class page. The method grandparent defaults to
+    % `"Classes"` for compatibility with existing documentation builds.
 
     properties
         name string
@@ -17,6 +22,7 @@ classdef ClassDocumentation < handle
         pathOfClassFolderOnHardDrive
         parent
         grandparent
+        methodGrandparent
         nav_order
         rootTopic
         developerRootTopic
@@ -44,6 +50,7 @@ classdef ClassDocumentation < handle
                 options.websiteFolder = "" % the folder relative to the root website folder
                 options.parent = []
                 options.grandparent = []
+                options.methodGrandparent = "Classes" % grandparent used by generated method and property pages
                 options.nav_order = []
                 options.excludedSuperclasses = {'handle'};
                 options.excludedMethodNames string = string.empty(0,1)
@@ -53,6 +60,7 @@ classdef ClassDocumentation < handle
             self.websiteRootURL = options.websiteRootURL;
             self.parent = options.parent;
             self.grandparent = options.grandparent;
+            self.methodGrandparent = options.methodGrandparent;
             self.nav_order = options.nav_order;
             self.excludedSuperclasses = options.excludedSuperclasses;
             self.excludedMethodNames = options.excludedMethodNames;
@@ -151,13 +159,19 @@ classdef ClassDocumentation < handle
             methodDocumentationNameMap = containers.Map;
             for index = find(validMethods)
                 methodDocumentation = self.allMethodDocumentation(index);
-                if ismember(lower(methodDocumentation.name),lower(keys(methodDocumentationNameMap))) && ~isKey(methodDocumentationNameMap,methodDocumentation.name)
-                    methodDocumentation.pathOfOutputFile = fullfile(self.pathOfClassFolderOnHardDrive,sprintf('%s_.md',lower(methodDocumentation.name)));
-                    methodDocumentation.pathOfFileOnWebsite = fullfile("/",self.pathOfClassFolderOnWebsite,sprintf('%s_.html',lower(methodDocumentation.name)));
+                lowerName = lower(string(methodDocumentation.name));
+                existingNames = lower(string(keys(methodDocumentationNameMap)));
+                hasCaseInsensitiveCollision = ismember(lowerName, existingNames) && ...
+                    ~isKey(methodDocumentationNameMap,methodDocumentation.name);
+                if lowerName == "index" || hasCaseInsensitiveCollision
+                    fileStem = lowerName + "_";
                 else
-                    methodDocumentation.pathOfOutputFile = fullfile(self.pathOfClassFolderOnHardDrive,sprintf('%s.md',lower(methodDocumentation.name)));
-                    methodDocumentation.pathOfFileOnWebsite = fullfile("/",self.pathOfClassFolderOnWebsite,sprintf('%s.html',lower(methodDocumentation.name)));
+                    fileStem = lowerName;
                 end
+                methodDocumentation.pathOfOutputFile = fullfile( ...
+                    self.pathOfClassFolderOnHardDrive,sprintf('%s.md',fileStem));
+                methodDocumentation.pathOfFileOnWebsite = fullfile( ...
+                    "/",self.pathOfClassFolderOnWebsite,sprintf('%s.html',fileStem));
                 methodDocumentationNameMap(methodDocumentation.name) = methodDocumentation;
             end
 
@@ -181,7 +195,7 @@ classdef ClassDocumentation < handle
             for i=1:length(methodNames)
                 iPageNumber = iPageNumber+1;
                 methodDocumentation = methodDocumentationNameMap(methodNames{i});
-                methodDocumentation.writeToFile(self.name,iPageNumber)
+                methodDocumentation.writeToFile(self.name,iPageNumber,self.methodGrandparent)
             end
         end
 
@@ -333,6 +347,7 @@ classdef ClassDocumentation < handle
                 options.websiteFolder % the folder relative to the root website folder
                 options.parent = []
                 options.grandparent = []
+                options.methodGrandparent = "Classes"
                 options.excludedSuperclasses = {'handle'};
                 options.shouldLoadDetailedDescriptionSidecars (1,1) logical = true
             end
@@ -345,6 +360,7 @@ classdef ClassDocumentation < handle
                     websiteFolder=options.websiteFolder, ...
                     parent=options.parent, ...
                     grandparent=options.grandparent, ...
+                    methodGrandparent=options.methodGrandparent, ...
                     nav_order=iName, ...
                     excludedSuperclasses=options.excludedSuperclasses, ...
                     shouldLoadDetailedDescriptionSidecars=options.shouldLoadDetailedDescriptionSidecars);
