@@ -1,5 +1,8 @@
 # Version History
 
+## [1.3.2] - 2026-08-11
+- preserved the space before rendered units and emitted real Markdown paragraph breaks in annotated property descriptions
+
 ## [1.3.1] - 2026-08-11
 - rendered machine-readable property units as consistent upright MathJax while preserving raw annotation metadata, legacy unit spellings, readable dimensionless and directional prose, and literal fallback for unknown values
 

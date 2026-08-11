@@ -278,8 +278,7 @@ classdef MethodDocumentation < handle
                 end
 
                 unitDescription = MethodDocumentation.formattedUnitDescription(self.units);
-                str = strcat(str,' ',char(unitDescription),'.\n\n');
-                fprintf(fileID,'%s',str);
+                fprintf(fileID,'%s %s.\n\n',str,char(unitDescription));
             end
 
             % ## Description
