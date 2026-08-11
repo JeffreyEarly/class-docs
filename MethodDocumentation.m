@@ -277,12 +277,9 @@ classdef MethodDocumentation < handle
                     str = strcat(str,self.dimensions{end},')$$ and');
                 end
 
-                if isempty(self.units)
-                    str = strcat(str,' no units.\n\n');
-                else
-                    str = strcat(str,' units of $$',self.units,'$$.\n\n');
-                end
-                fprintf(fileID,str);
+                unitDescription = MethodDocumentation.formattedUnitDescription(self.units);
+                str = strcat(str,' ',char(unitDescription),'.\n\n');
+                fprintf(fileID,'%s',str);
             end
 
             % ## Description
@@ -369,6 +366,113 @@ classdef MethodDocumentation < handle
             else
                 formattedText = sizeText;
             end
+        end
+
+        function description = formattedUnitDescription(units)
+            if MethodDocumentation.isMetadataValueEmpty(units)
+                description = "no units";
+                return
+            end
+
+            rawUnits = strtrim(string(units));
+            if rawUnits == "1"
+                description = "is dimensionless";
+                return
+            elseif rawUnits == "degrees_north"
+                description = "units of degrees north ($$^\circ\mathrm{N}$$)";
+                return
+            elseif rawUnits == "degrees_east"
+                description = "units of degrees east ($$^\circ\mathrm{E}$$)";
+                return
+            end
+
+            [formattedUnits, isRecognized] = MethodDocumentation.formattedUnitMath(rawUnits);
+            if isRecognized
+                description = "units of $$" + formattedUnits + "$$";
+            else
+                literalUnits = replace(rawUnits,"`","&#96;");
+                description = "units of `" + literalUnits + "`";
+            end
+        end
+
+        function [formattedUnits, isRecognized] = formattedUnitMath(rawUnits)
+            formattedUnits = "";
+            isRecognized = false;
+
+            sections = split(rawUnits,"/");
+            if any(strlength(strtrim(sections)) == 0)
+                return
+            end
+
+            rawFactors = regexp(char(rawUnits),'[^\s/]+','match');
+            symbols = strings(1,numel(rawFactors));
+            exponents = ones(1,numel(rawFactors));
+            iFactor = 0;
+            for iSection = 1:numel(sections)
+                factors = split(strtrim(sections(iSection)));
+                factors = factors(strlength(factors) > 0);
+                for factor = factors'
+                    if factor == "1"
+                        continue
+                    end
+                    [symbol, exponent, parsed] = MethodDocumentation.parsedUnitFactor(factor);
+                    if ~parsed || ~MethodDocumentation.isRecognizedUnitSymbol(symbol)
+                        return
+                    end
+                    if iSection > 1
+                        exponent = -exponent;
+                    end
+                    iFactor = iFactor + 1;
+                    symbols(iFactor) = symbol;
+                    exponents(iFactor) = exponent;
+                end
+            end
+
+            if iFactor == 0
+                return
+            end
+            symbols = symbols(1:iFactor);
+            exponents = exponents(1:iFactor);
+
+            terms = strings(1,iFactor);
+            for iTerm = 1:iFactor
+                if exponents(iTerm) == 1
+                    terms(iTerm) = symbols(iTerm);
+                else
+                    terms(iTerm) = symbols(iTerm) + "^{" + exponents(iTerm) + "}";
+                end
+            end
+            formattedUnits = "\mathrm{" + join(terms,"\,") + "}";
+            isRecognized = true;
+        end
+
+        function [symbol, exponent, parsed] = parsedUnitFactor(factor)
+            expression = '^(?<symbol>[A-Za-z]+)(?<exponent>(?:\^\{[+-]?\d+\}|\^[+-]?\d+|[+-]?\d+)?)$';
+            match = regexp(char(factor),expression,'names','once');
+            if isempty(match)
+                symbol = "";
+                exponent = NaN;
+                parsed = false;
+                return
+            end
+
+            symbol = string(match.symbol);
+            exponentText = erase(string(match.exponent),["^","{","}"]);
+            if strlength(exponentText) == 0
+                exponent = 1;
+            else
+                exponent = str2double(exponentText);
+            end
+            parsed = isfinite(exponent) && exponent ~= 0 && exponent == fix(exponent);
+        end
+
+        function tf = isRecognizedUnitSymbol(symbol)
+            recognizedSymbols = [ ...
+                "m", "s", "kg", "g", "A", "K", "mol", "cd", ...
+                "rad", "sr", "Hz", "N", "Pa", "J", "W", "C", ...
+                "V", "F", "Ohm", "ohm", "S", "Wb", "T", "H", ...
+                "L", "l", "min", "h", "day", "d", "dbar"];
+            tf = ismember(symbol,recognizedSymbols);
         end
 
         function [className, sizeText] = typeMetadataFromPropertyValidation(validation)

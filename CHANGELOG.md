@@ -1,5 +1,8 @@
 # Version History
 
+## [1.3.1] - 2026-08-11
+- rendered machine-readable property units as consistent upright MathJax while preserving raw annotation metadata, legacy unit spellings, readable dimensionless and directional prose, and literal fallback for unknown values
+
 ## [1.3.0] - 2026-08-08
 - added explicit `tutorialOutputCapture(...)` support so tutorials can emit captured console output as fenced markdown blocks with preserved ordering, normalized text cleanup, and regression coverage
 - preserved class landing pages when an API member is named `index`
