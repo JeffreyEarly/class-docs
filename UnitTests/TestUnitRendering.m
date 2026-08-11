@@ -37,12 +37,18 @@ for iCase = 1:size(cases,1)
     documentation.dimensions = {'sample'};
     documentation.units = rawUnits;
     documentation.isComplex = false;
+    documentation.detailedDescription = "Further context.";
     documentation.pathOfOutputFile = fullfile(helperRoot,"sample" + iCase + ".md");
     documentation.writeToFile("Example",iCase,"Classes");
 
     generatedText = string(fileread(documentation.pathOfOutputFile));
     assert(contains(generatedText,expectedText), ...
         'Unit value "%s" did not render as expected.',rawUnits);
+    expectedParagraph = "Real valued property with dimension $$sample$$ and " + expectedText + newline + newline + "## Discussion" + newline + "Further context.";
+    assert(contains(generatedText,expectedParagraph), ...
+        'The complete property description must retain spacing and real Markdown line breaks.');
+    assert(~contains(generatedText,"andunits") && ~contains(generatedText,"\\n\\n"), ...
+        'Property descriptions must not contain collapsed words or literal newline escapes.');
     assert(strcmp(string(documentation.units),string(rawUnits)), ...
         'Rendering must not modify the raw units metadata.');
 end
